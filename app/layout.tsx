@@ -11,16 +11,21 @@ export const metadata: Metadata = {
   title: "Imersão sem Neura",
   description:
     "Pare de se culpar: Não é falta de força de vontade. Descubra o que REALMENTE impede mulheres 60+ de emagrecer",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
       <head>
-        {/* Preconnect to external resources */}
-        <link rel="preconnect" href="https://player-vz-30fdd560-ba9.tv.pandavideo.com.br" />
-        <link rel="dns-prefetch" href="https://pay.hub.la" />
+        {/* Preconnect to critical origins */}
+        <link rel="preconnect" href="https://player-vz-30fdd560-ba9.tv.pandavideo.com.br" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://img.youtube.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://pay.hub.la" />
+        <link rel="dns-prefetch" href="https://www.youtube.com" />
+
+        {/* Preload critical assets */}
+        <link rel="preload" href="/images/dra-claudia-nova.jpeg" as="image" type="image/jpeg" />
 
         {/* Google Tag Manager Script */}
         <Script id="google-tag-manager" strategy="afterInteractive">
@@ -32,7 +37,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             })(window,document,'script','dataLayer','GTM-KM58RN5');
           `}
         </Script>
-        {/* End Google Tag Manager Script */}
       </head>
       <body className={inter.className}>
         {/* Google Tag Manager (noscript) */}
@@ -48,6 +52,41 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {children}
         <SpeedInsights />
+        <Script id="hubla-utm-tracking" strategy="afterInteractive">
+          {`
+            (function() {
+              'use strict';
+              const prefixDomains = ["https://pay.hub.la", "https://invoice.hub.la", "https://app.hub.la", "https://hub.la"];
+              
+              function getUtmParams() {
+                const url = new URL(window.location.href);
+                const utms = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+                const values = utms.map(param => url.searchParams.get(param) || '');
+                return values.some(v => v) ? \`&sck=\${values.join('|')}\` : '';
+              }
+              
+              function updateLinks() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (!urlParams.toString()) return;
+                
+                const utmParams = getUtmParams();
+                const allParams = urlParams.toString() + utmParams;
+                
+                document.querySelectorAll('a[href*="hub.la"]').forEach(link => {
+                  if (prefixDomains.some(domain => link.href.startsWith(domain))) {
+                    link.href += (link.href.includes('?') ? '&' : '?') + allParams;
+                  }
+                });
+              }
+              
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', updateLinks);
+              } else {
+                updateLinks();
+              }
+            })();
+          `}
+        </Script>
       </body>
     </html>
   )

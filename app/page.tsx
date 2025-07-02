@@ -1,3 +1,8 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { UrgencyNotice } from "@/components/urgency-notice"
 import {
@@ -22,6 +27,162 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
+
+// --- HELPER COMPONENTS & HOOKS FOR OPTIMIZATION ---
+
+// 1. Intersection Observer Hook to lazy-load sections
+const useIntersectionObserver = (options = {}) => {
+  const [isIntersecting, setIsIntersecting] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsIntersecting(true)
+          if (ref.current) {
+            observer.unobserve(ref.current)
+          }
+        }
+      },
+      { threshold: 0.1, ...options },
+    )
+
+    if (ref.current) {
+      observer.observe(ref.current)
+    }
+
+    return () => {
+      if (ref.current) {
+        observer.disconnect()
+      }
+    }
+  }, [options])
+
+  return [ref, isIntersecting]
+}
+
+// 2. Lazy Panda Video Component with Custom Thumbnail
+const PandaVideoLazy = () => {
+  const [videoLoaded, setVideoLoaded] = useState(false)
+
+  return (
+    <div className="relative w-full max-w-sm mx-auto">
+      <div style={{ position: "relative", paddingTop: "177.77777777777777%" }}>
+        {/* THUMBNAIL BEFORE VIDEO LOADS */}
+        {!videoLoaded && (
+          <div
+            className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg cursor-pointer flex flex-col items-center justify-center"
+            onClick={() => setVideoLoaded(true)}
+          >
+            <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-full flex items-center justify-center mb-4 hover:bg-white/30 transition-colors">
+              <svg className="w-10 h-10 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+            <div className="text-white text-center px-4">
+              <p className="font-bold text-lg mb-2">▶️ Assistir Apresentação</p>
+              <p className="text-sm opacity-90">Descubra o método para mulheres 60+</p>
+            </div>
+          </div>
+        )}
+
+        {/* ACTUAL VIDEO (loads only after click) */}
+        {videoLoaded && (
+          <iframe
+            id="panda-video"
+            src="https://player-vz-30fdd560-ba9.tv.pandavideo.com.br/embed/?v=680760b5-e612-45c7-8c45-755e5f7c29a1&autoplay=1"
+            style={{
+              border: "none",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              borderRadius: "12px",
+            }}
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen={true}
+            width="100%"
+            height="100%"
+            className="rounded-lg shadow-xl"
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// 3. Lazy YouTube Component with Thumbnail
+const YouTubeLazy = ({ videoId, nome, resultado, especificidade }: (typeof depoimentosReais)[0]) => {
+  const [loadVideo, setLoadVideo] = useState(false)
+
+  const containerClasses =
+    "bg-purple-50/30 rounded-xl overflow-hidden shadow-lg hover:shadow-xl hover:shadow-purple-200/50 transition-shadow duration-300 border border-purple-100"
+
+  if (!loadVideo) {
+    return (
+      <div className={containerClasses}>
+        <div className="relative aspect-video w-full cursor-pointer group" onClick={() => setLoadVideo(true)}>
+          <Image
+            src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+            alt={`Thumbnail do depoimento de ${nome}`}
+            fill
+            style={{ objectFit: "cover" }}
+            loading="lazy"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/40 transition-colors">
+            <div className="w-16 h-16 bg-red-600/90 rounded-full flex items-center justify-center shadow-lg">
+              <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="p-6 text-center">
+          <p className="font-bold text-lg text-purple-800">{resultado}</p>
+          <p className="text-base text-pink-600 font-semibold">{especificidade}</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={containerClasses}>
+      <div className="aspect-video w-full">
+        <iframe
+          className="w-full h-full"
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+          title={`Depoimento de ${nome}`}
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        ></iframe>
+      </div>
+      <div className="p-6 text-center">
+        <p className="font-bold text-lg text-purple-800">{resultado}</p>
+        <p className="text-base text-pink-600 font-semibold">{especificidade}</p>
+      </div>
+    </div>
+  )
+}
+
+// 4. Reusable CTA Button Component
+const CTAButton = ({
+  children,
+  className = "",
+  href,
+}: { children: React.ReactNode; className?: string; href: string }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className={`block w-full text-center font-bold py-4 px-8 rounded-full transition-colors duration-200 ${className}`}
+  >
+    {children}
+  </a>
+)
+
+// --- DATA & CONSTANTS ---
 
 const depoimentosReais = [
   {
@@ -62,12 +223,32 @@ const depoimentosReais = [
   },
 ]
 
+const mainHeadline =
+  "Pare de se culpar: Não é falta de força de vontade. Descubra o que REALMENTE impede mulheres 60+ de emagrecer"
+const checkoutUrl = "https://pay.hub.la/ry4PAFI0Qud8NOe0cFrf"
+
+// --- MAIN PAGE COMPONENT ---
+
 export default function LandingPage() {
+  const [isMobile, setIsMobile] = useState(false)
+  const [depoimentosRef, depoimentosVisible] = useIntersectionObserver({ rootMargin: "100px" })
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024)
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
   return (
     <div className="bg-slate-50 text-slate-800 font-sans">
       <main>
         {/* 1. Hero Section */}
-        <section className="relative bg-gradient-to-br from-purple-600 via-pink-500 to-purple-800 text-white overflow-hidden">
+        <section
+          className={`relative text-white overflow-hidden ${
+            isMobile ? "bg-purple-600" : "bg-gradient-to-br from-purple-600 to-purple-800"
+          }`}
+        >
           <div className="absolute inset-0 opacity-30">
             <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute bottom-0 right-0 w-80 h-80 bg-pink-300/20 rounded-full blur-2xl animate-pulse delay-1000"></div>
@@ -81,52 +262,20 @@ export default function LandingPage() {
                 🔴 AO VIVO - 02/07 às 14h
               </div>
             </div>
-            <h1 className="text-lg font-bold text-white text-center leading-tight mb-4">
-              Pare de se culpar: Não é falta de força de vontade. Descubra o que REALMENTE impede mulheres 60+ de
-              emagrecer
-            </h1>
+            <h1 className="text-lg font-bold text-white text-center leading-tight mb-4">{mainHeadline}</h1>
             <p className="text-sm text-white/90 mb-4 text-center">
               Método científico para emagrecer 10-20kg SEM abrir mão do que gosta
             </p>
-
             <div className="flex-1 flex items-center justify-center mb-6">
-              <div className="w-full max-w-xs mx-auto">
-                <div style={{ position: "relative", paddingTop: "177.77777777777777%" }}>
-                  <iframe
-                    id="panda-mobile"
-                    src="https://player-vz-30fdd560-ba9.tv.pandavideo.com.br/embed/?v=680760b5-e612-45c7-8c45-755e5f7c29a1"
-                    style={{
-                      border: "none",
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      borderRadius: "12px",
-                    }}
-                    allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture"
-                    allowFullScreen={true}
-                    width="100%"
-                    height="100%"
-                    loading="lazy"
-                    // @ts-ignore
-                    fetchPriority="high"
-                    className="rounded-lg shadow-xl"
-                  />
-                </div>
-              </div>
+              <PandaVideoLazy />
             </div>
-
             <div className="mt-auto space-y-3">
               <div className="bg-white/20 backdrop-blur border border-white/30 rounded-lg p-3">
                 <p className="text-white font-medium text-center text-sm">✨ Vagas limitadas para esta turma!</p>
               </div>
-              <a
-                href="https://pay.hub.la/ry4PAFI0Qud8NOe0cFrf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-white text-purple-600 font-bold py-4 px-6 rounded-full text-center text-base transition-all duration-200 hover:scale-105 hover:shadow-xl"
-              >
+              <CTAButton href={checkoutUrl} className="bg-white text-purple-600 hover:bg-slate-200 text-base">
                 GARANTIR MINHA VAGA AGORA
-              </a>
+              </CTAButton>
               <p className="text-white/80 text-center text-xs">
                 ✓ Sem dietas restritivas ✓ Método científico ✓ Específico para 60+
               </p>
@@ -137,38 +286,13 @@ export default function LandingPage() {
           <div className="hidden lg:block relative z-10 container mx-auto px-4 py-20">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="order-2 lg:order-1 flex justify-center">
-                <div className="relative w-full max-w-sm">
-                  <div style={{ position: "relative", paddingTop: "177.77777777777777%" }}>
-                    <iframe
-                      id="panda-desktop"
-                      src="https://player-vz-30fdd560-ba9.tv.pandavideo.com.br/embed/?v=680760b5-e612-45c7-8c45-755e5f7c29a1"
-                      style={{
-                        border: "none",
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        borderRadius: "16px",
-                      }}
-                      allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture"
-                      allowFullScreen={true}
-                      width="100%"
-                      height="100%"
-                      loading="lazy"
-                      // @ts-ignore
-                      fetchPriority="high"
-                      className="rounded-2xl shadow-2xl shadow-black/30"
-                    />
-                  </div>
-                </div>
+                <PandaVideoLazy />
               </div>
               <div className="order-1 lg:order-2">
                 <div className="bg-white/20 backdrop-blur rounded-full px-4 py-2 font-semibold text-sm mb-4 inline-block">
                   🔴 AO VIVO - 02/07 às 14h
                 </div>
-                <h1 className="text-5xl font-bold text-white text-center leading-tight mb-4">
-                  Pare de se culpar: Não é falta de força de vontade. Descubra o que REALMENTE impede mulheres 60+ de
-                  emagrecer
-                </h1>
+                <h1 className="text-5xl font-bold text-white text-center leading-tight mb-4">{mainHeadline}</h1>
                 <p className="text-lg text-white/90 mb-6 text-center">
                   Assista até o final. Método científico específico para mulheres 60+ que já tentaram várias dietas mas
                   sempre voltam a ganhar peso
@@ -176,14 +300,9 @@ export default function LandingPage() {
                 <div className="bg-white/20 backdrop-blur border border-white/30 rounded-lg p-4 mb-6">
                   <p className="text-white font-medium text-center">✨ Vagas limitadas para esta turma!</p>
                 </div>
-                <a
-                  href="https://pay.hub.la/ry4PAFI0Qud8NOe0cFrf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full bg-white text-purple-600 font-bold py-4 px-8 rounded-full text-center text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl mb-4"
-                >
+                <CTAButton href={checkoutUrl} className="bg-white text-purple-600 hover:bg-slate-200 text-lg mb-4">
                   GARANTIR MINHA VAGA AGORA
-                </a>
+                </CTAButton>
                 <p className="text-sm text-white/80 text-center">
                   ✓ Sem dietas restritivas ✓ Método científico ✓ Específico para 60+
                 </p>
@@ -232,12 +351,13 @@ export default function LandingPage() {
               <div className="flex justify-center">
                 <Image
                   src="/images/dra-claudia-nova.jpeg"
-                  alt="Foto da Dra. Cláudia Benevides"
-                  width={400}
-                  height={400}
+                  alt="Dra. Cláudia Benevides"
+                  width={300}
+                  height={300}
                   priority={false}
                   loading="lazy"
                   className="rounded-full shadow-2xl shadow-purple-200 aspect-square object-cover"
+                  sizes="(max-width: 768px) 150px, 300px"
                 />
               </div>
               <div>
@@ -346,35 +466,25 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 6. Social Proof Section - Video Testimonials */}
-        <section className="py-12 md:py-20 bg-white">
+        {/* 6. Social Proof Section - Video Testimonials (Lazy Loaded) */}
+        <section ref={depoimentosRef} className="py-12 md:py-20 bg-white">
           <div className="container mx-auto px-4 md:px-6">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-purple-800">
               VEJA COMO AJUDAMOS AS NOSSAS ALUNAS A EMAGRECER SAUDÁVEL E SEM NEURA!
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-              {depoimentosReais.map((depoimento) => (
-                <div
-                  key={depoimento.youtubeId}
-                  className="bg-purple-50/30 rounded-xl overflow-hidden shadow-lg hover:shadow-xl hover:shadow-purple-200/50 transition-shadow duration-300 border border-purple-100"
-                >
-                  <div className="aspect-video w-full">
-                    <iframe
-                      className="w-full h-full"
-                      src={`https://www.youtube.com/embed/${depoimento.youtubeId}`}
-                      title={`Depoimento de ${depoimento.nome}`}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                    ></iframe>
-                  </div>
-                  <div className="p-6 text-center">
-                    <p className="font-bold text-lg text-purple-800">{depoimento.resultado}</p>
-                    <p className="text-base text-pink-600 font-semibold">{depoimento.especificidade}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {depoimentosVisible ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+                {depoimentosReais.map((depoimento) => (
+                  <YouTubeLazy key={depoimento.youtubeId} {...depoimento} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-purple-100/50 rounded-xl h-72 animate-pulse"></div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -424,14 +534,9 @@ export default function LandingPage() {
                 <p className="text-5xl font-bold text-amber-400 my-2">12x de R$ 10,18</p>
                 <p className="text-lg">ou R$ 97,00 à vista</p>
               </div>
-              <a
-                href="https://pay.hub.la/ry4PAFI0Qud8NOe0cFrf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-white hover:bg-slate-200 text-purple-700 font-bold py-4 px-8 text-xl rounded-full shadow-lg transition-all transform hover:scale-105 text-center"
-              >
+              <CTAButton href={checkoutUrl} className="bg-white hover:bg-slate-200 text-purple-700 text-xl">
                 SIM, QUERO GARANTIR MEU ACESSO COM DESCONTO
-              </a>
+              </CTAButton>
               <UrgencyNotice />
             </div>
           </div>
@@ -510,14 +615,9 @@ export default function LandingPage() {
               Pare de se culpar pela ansiedade alimentar. Pare de sofrer com o efeito sanfona. Milhares de mulheres como
               você já descobriram que o problema não era falta de força de vontade.
             </p>
-            <a
-              href="https://pay.hub.la/ry4PAFI0Qud8NOe0cFrf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full max-w-md mx-auto bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-8 text-xl rounded-full shadow-lg transition-transform transform hover:scale-105 text-center"
-            >
+            <CTAButton href={checkoutUrl} className="max-w-md mx-auto bg-pink-500 hover:bg-pink-600 text-white text-xl">
               SIM, EU QUERO CONTROLAR MEU CORPO NOVAMENTE
-            </a>
+            </CTAButton>
             <div className="flex justify-center items-center gap-6 mt-8 text-sm text-purple-300">
               <div className="flex items-center gap-2">
                 <Lock className="h-5 w-5" />
